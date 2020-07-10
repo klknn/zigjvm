@@ -1,10 +1,12 @@
 *
-zig-cache/
 
 !*/
 !*.java
 !*.class
 !*.zig
 !*.md
+!*.txt
 
 !.gitignore
+
+zig-cache/
