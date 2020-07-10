@@ -1,5 +1,8 @@
 # zigjvm (wip)
 
+![0.6.0](https://github.com/klknn/zigjvm/workflows/0.6.0/badge.svg)
+![master](https://github.com/klknn/zigjvm/workflows/master/badge.svg)
+
 zig implementation of toy jvm https://zserge.com/posts/jvm/
 
 Boost Software License - Version 1.0 - August 17th, 2003
