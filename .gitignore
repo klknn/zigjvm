@@ -1,0 +1,10 @@
+*
+zig-cache/
+
+!*/
+!*.java
+!*.class
+!*.zig
+!*.md
+
+!.gitignore
