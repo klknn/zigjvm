@@ -1,0 +1,24 @@
+name: CI
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    strategy:
+      max-parallel: 20
+      matrix:
+        zigurl:
+          - $(wget --quiet --output-document=- https://ziglang.org/download/index.json | jq --raw-output '.master."x86_64-linux".tarball')
+          - https://ziglang.org/download/0.6.0/zig-linux-x86_64-0.6.0.tar.xz
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: install
+      run: |
+        wget --quiet --output-document=- ${{ matrix.zigurl }} | tar Jx
+        mv zig-linux-x86_64-* zig
+        echo zig version $(./zig/zig version)
+    - name: test
+      run: |
+        ./zig/zig build test
+
