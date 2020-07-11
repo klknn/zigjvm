@@ -21,13 +21,25 @@ pub fn build(b: *Builder) void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
+    // Setup tests.
     const test_step = b.step("test", "Test the app");
-    const main_test = b.addTest("src/main.zig");
-    main_test.linkSystemLibrary("c");
-    test_step.dependOn(&main_test.step);
-    const loader_test = b.addTest("src/loader.zig");
-    loader_test.linkSystemLibrary("c");
-    test_step.dependOn(&loader_test.step);
+    {
+        const t = b.addTest("src/main.zig");
+        t.linkSystemLibrary("c");
+        test_step.dependOn(&t.step);
+    }
+    {
+        const t = b.addTest("src/loader.zig");
+        t.linkSystemLibrary("c");
+        test_step.dependOn(&t.step);
+    }
+    {
+        const t = b.addTest("src/vm.zig");
+        t.linkSystemLibrary("c");
+        test_step.dependOn(&t.step);
+    }
+
     test_step.dependOn(&b.addTest("src/types.zig").step);
+
     test_step.dependOn(&b.addTest("src/memo.zig").step);
 }

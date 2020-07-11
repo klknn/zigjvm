@@ -9,7 +9,7 @@ pub const NameAndType = struct {
 };
 
 /// Field type.
-pub const ConstField = struct {
+pub const FieldRef = struct {
     class: u16,
     name_and_type: u16,
 };
@@ -32,8 +32,8 @@ pub const Const = union(ConstTag) {
     unused: bool,
     class: u16,
     string: u16,
-    field: ConstField,
-    method: ConstField,
+    field: FieldRef,
+    method: FieldRef,
     name_and_type: NameAndType,
 
     /// Destroys utf8 string.
@@ -50,6 +50,24 @@ pub const Const = union(ConstTag) {
 pub const Attribute = struct {
     name: []const u8,
     data: []u8,
+
+    // TODO: parse code from data
+    // Code_attribute {
+    //     u2 attribute_name_index;
+    //     u4 attribute_length;
+    //     u2 max_stack;
+    //     u2 max_locals;
+    //     u4 code_length;
+    //     u1 code[code_length];
+    //     u2 exception_table_length;
+    //     {   u2 start_pc;
+    //         u2 end_pc;
+    //         u2 handler_pc;
+    //         u2 catch_type;
+    //     } exception_table[exception_table_length];
+    //     u2 attributes_count;
+    //     attribute_info attributes[attributes_count];
+    // }
 };
 
 /// Field type is used for both, fields and methods
@@ -65,7 +83,7 @@ pub const Class = struct {
     major_version: u16,
     minor_version: u16,
 
-    const_pool: []Const,
+    constant_pool: []Const,
     name: []const u8,
     super: []const u8,
     flags: u16,
@@ -75,13 +93,13 @@ pub const Class = struct {
     attributes: []Attribute,
 
     pub fn deinit(self: Class) void {
-        for (self.const_pool) |c| {
+        for (self.constant_pool) |c| {
             c.deinit();
         }
     }
 
     pub fn utf8(self: Class, index: usize) []const u8 {
-        const c = self.const_pool[index];
+        const c = self.constant_pool[index];
         return switch (c) {
             .utf8 => c.utf8,
             .class => self.utf8(c.class),

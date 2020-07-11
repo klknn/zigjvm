@@ -1,5 +1,6 @@
 const std = @import("std");
-const warn = std.debug.warn;
+// const warn = std.debug.warn;
+pub fn warn(comptime fmt: []const u8, args: var) void {}
 const assert = std.debug.assert;
 
 const types = @import("types.zig");
@@ -35,13 +36,13 @@ pub const Loader = struct {
                 .utf8 = try self.bytes(try self.primitive(u16)),
             },
             types.ConstTag.field => types.Const{
-                .field = types.ConstField{
+                .field = types.FieldRef{
                     .class = try self.primitive(u16),
                     .name_and_type = try self.primitive(u16),
                 },
             },
             types.ConstTag.method => types.Const{
-                .method = types.ConstField{
+                .method = types.FieldRef{
                     .class = try self.primitive(u16),
                     .name_and_type = try self.primitive(u16),
                 },
@@ -58,9 +59,9 @@ pub const Loader = struct {
 
     fn constPool(self: Loader) ![]types.Const {
         const len = try self.primitive(u16);
-        warn("Class.const_pool length: {}\n", .{len});
+        warn("Class.constant_pool length: {}\n", .{len});
         const ret = try types.allocator.alloc(types.Const, len);
-        warn("Class.const_pool [\n", .{});
+        warn("Class.constant_pool [\n", .{});
         for (ret) |*v, i| {
             // The constant_pool table is indexed from 1 to constant_pool_count - 1.
             // https://docs.oracle.com/javase/specs/jvms/se14/html/jvms-4.html#jvms-4.1
@@ -114,6 +115,24 @@ pub const Loader = struct {
         return ret;
     }
 
+    /// ClassFile {
+    ///     u4             magic;
+    ///     u2             minor_version;
+    ///     u2             major_version;
+    ///     u2             constant_pool_count;
+    ///     cp_info        constant_pool[constant_pool_count-1];
+    ///     u2             access_flags;
+    ///     u2             this_class;
+    ///     u2             super_class;
+    ///     u2             interfaces_count;
+    ///     u2             interfaces[interfaces_count];
+    ///     u2             fields_count;
+    ///     field_info     fields[fields_count];
+    ///     u2             methods_count;
+    ///     method_info    methods[methods_count];
+    ///     u2             attributes_count;
+    ///     attribute_info attributes[attributes_count];
+    /// }
     pub fn class(self: Loader) !types.Class {
         var ret: types.Class = undefined;
 
@@ -131,7 +150,7 @@ pub const Loader = struct {
         assert(ret.major_version >= 45);
 
         // Loads constants.
-        ret.const_pool = try self.constPool();
+        ret.constant_pool = try self.constPool();
 
         // Loads class fields.
         ret.flags = try self.primitive(u16);
@@ -163,24 +182,24 @@ test "load test/Add.class" {
     assert(c.minor_version == 0);
 
     // const pool
-    assert(c.const_pool.len == 15);
-    assert(c.const_pool[0].unused);
-    assert(c.const_pool[1].method.class == 3);
-    assert(c.const_pool[1].method.name_and_type == 12);
-    assert(c.const_pool[2].class == 13);
-    assert(c.const_pool[3].class == 14);
-    assert(std.mem.eql(u8, c.const_pool[4].utf8, "<init>"));
-    assert(std.mem.eql(u8, c.const_pool[5].utf8, "()V"));
-    assert(std.mem.eql(u8, c.const_pool[6].utf8, "Code"));
-    assert(std.mem.eql(u8, c.const_pool[7].utf8, "LineNumberTable"));
-    assert(std.mem.eql(u8, c.const_pool[8].utf8, "add"));
-    assert(std.mem.eql(u8, c.const_pool[9].utf8, "(II)I"));
-    assert(std.mem.eql(u8, c.const_pool[10].utf8, "SourceFile"));
-    assert(std.mem.eql(u8, c.const_pool[11].utf8, "Add.java"));
-    assert(c.const_pool[12].name_and_type.name == 4);
-    assert(c.const_pool[12].name_and_type.t == 5);
-    assert(std.mem.eql(u8, c.const_pool[13].utf8, "Add"));
-    assert(std.mem.eql(u8, c.const_pool[14].utf8, "java/lang/Object"));
+    assert(c.constant_pool.len == 15);
+    assert(c.constant_pool[0].unused);
+    assert(c.constant_pool[1].method.class == 3);
+    assert(c.constant_pool[1].method.name_and_type == 12);
+    assert(c.constant_pool[2].class == 13);
+    assert(c.constant_pool[3].class == 14);
+    assert(std.mem.eql(u8, c.constant_pool[4].utf8, "<init>"));
+    assert(std.mem.eql(u8, c.constant_pool[5].utf8, "()V"));
+    assert(std.mem.eql(u8, c.constant_pool[6].utf8, "Code"));
+    assert(std.mem.eql(u8, c.constant_pool[7].utf8, "LineNumberTable"));
+    assert(std.mem.eql(u8, c.constant_pool[8].utf8, "add"));
+    assert(std.mem.eql(u8, c.constant_pool[9].utf8, "(II)I"));
+    assert(std.mem.eql(u8, c.constant_pool[10].utf8, "SourceFile"));
+    assert(std.mem.eql(u8, c.constant_pool[11].utf8, "Add.java"));
+    assert(c.constant_pool[12].name_and_type.name == 4);
+    assert(c.constant_pool[12].name_and_type.t == 5);
+    assert(std.mem.eql(u8, c.constant_pool[13].utf8, "Add"));
+    assert(std.mem.eql(u8, c.constant_pool[14].utf8, "java/lang/Object"));
 
     // other fields
     assert(std.mem.eql(u8, c.name, "Add"));
