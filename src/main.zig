@@ -26,11 +26,23 @@ const std = @import("std");
 const warn = std.debug.warn;
 const assert = std.debug.assert;
 const loader = @import("loader.zig");
+const types = @import("types.zig");
 
-pub fn main() !void {
+const help = "Usage: zigjvm foo.class";
+
+pub fn main() !u8 {
+    types.allocator = std.heap.page_allocator;
     // get args
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+    const args = try std.process.argsAlloc(types.allocator);
+    defer std.process.argsFree(types.allocator, args);
+    if (args.len == 1) {
+        warn("{}\n", .{help});
+        return 1;
+    }
+    if (std.mem.eql(u8, args[1], "-h") or std.mem.eql(u8, args[1], "--help")) {
+        warn("{}\n", .{help});
+        return 0;
+    }
 
     const path = args[1];
     const file = try std.fs.cwd().openFile(path, .{ .write = false });
@@ -39,4 +51,5 @@ pub fn main() !void {
     const l = loader.Loader{ .file = file };
     const c = try l.class();
     defer c.deinit();
+    return 0;
 }

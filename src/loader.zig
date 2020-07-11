@@ -4,7 +4,8 @@ const assert = std.debug.assert;
 
 const types = @import("types.zig");
 
-const Loader = struct {
+/// Class file loader type.
+pub const Loader = struct {
     file: std.fs.File,
 
     fn primitive(self: Loader, comptime T: type) !T {
@@ -16,13 +17,12 @@ const Loader = struct {
     }
 
     fn bytes(self: Loader, len: usize) ![]u8 {
-        var buf = try types.allocator.alloc(u8, len);
+        const buf = try types.allocator.alloc(u8, len);
         const n = try self.file.read(buf);
         assert(n == len);
         return buf;
     }
 
-    /// Loads union fields from a given file.
     fn constant(self: Loader) !types.Const {
         return switch (@intToEnum(types.ConstTag, try self.primitive(u8))) {
             types.ConstTag.class => types.Const{
@@ -57,14 +57,13 @@ const Loader = struct {
     }
 
     fn constPool(self: Loader) ![]types.Const {
-        // Loads a constant pool.
-        // The constant_pool table is indexed from 1 to constant_pool_count - 1.
-        // https://docs.oracle.com/javase/specs/jvms/se14/html/jvms-4.html#jvms-4.1
         const len = try self.primitive(u16);
         warn("Class.const_pool length: {}\n", .{len});
-        var ret = try types.allocator.alloc(types.Const, len);
+        const ret = try types.allocator.alloc(types.Const, len);
         warn("Class.const_pool [\n", .{});
         for (ret) |*v, i| {
+            // The constant_pool table is indexed from 1 to constant_pool_count - 1.
+            // https://docs.oracle.com/javase/specs/jvms/se14/html/jvms-4.html#jvms-4.1
             v.* = if (i == 0)
                 types.Const{ .unused = true }
             else
@@ -77,7 +76,7 @@ const Loader = struct {
 
     fn interfaces(self: Loader, cls: types.Class) ![]([]const u8) {
         const n = try self.primitive(u16);
-        var ret = try types.allocator.alloc([]const u8, n);
+        const ret = try types.allocator.alloc([]const u8, n);
         for (ret) |*intf, i| {
             intf.* = cls.utf8(try self.primitive(u16));
             warn("Class.interfaces[{}]: {}", .{ i, intf });
@@ -87,16 +86,14 @@ const Loader = struct {
 
     fn attributes(self: Loader, cls: types.Class) ![]types.Attribute {
         const n = try self.primitive(u16);
-        var ret = try types.allocator.alloc(types.Attribute, n);
+        const ret = try types.allocator.alloc(types.Attribute, n);
         for (ret) |*a, i| {
             a.* = types.Attribute{
                 .name = cls.utf8(try self.primitive(u16)),
                 .data = try self.bytes(try self.primitive(u32)),
             };
             warn("attribute {}, name: {}, len: {}\n", .{
-                i,
-                a.name,
-                a.data.len,
+                i, a.name, a.data.len,
             });
         }
         return ret;
@@ -104,7 +101,7 @@ const Loader = struct {
 
     fn fields(self: Loader, cls: types.Class) ![]types.Field {
         const n = try self.primitive(u16);
-        var ret = try types.allocator.alloc(types.Field, n);
+        const ret = try types.allocator.alloc(types.Field, n);
         for (ret) |*f, i| {
             f.* = types.Field{
                 .flags = try self.primitive(u16),
@@ -122,7 +119,8 @@ const Loader = struct {
 
         // Loads header.
         var buffer: [4]u8 = undefined;
-        const bytes_read = try self.file.read(buffer[0..buffer.len]);
+        const n = try self.file.read(buffer[0..buffer.len]);
+        assert(n == 4);
         assert(buffer[0] == 0xca);
         assert(buffer[1] == 0xfe);
         assert(buffer[2] == 0xba);
@@ -160,6 +158,10 @@ test "load test/Add.class" {
     const c = try loader.class();
     defer c.deinit();
 
+    // version
+    assert(c.major_version == 55);
+    assert(c.minor_version == 0);
+
     // const pool
     assert(c.const_pool.len == 15);
     assert(c.const_pool[0].unused);
@@ -181,6 +183,8 @@ test "load test/Add.class" {
     assert(std.mem.eql(u8, c.const_pool[14].utf8, "java/lang/Object"));
 
     // other fields
+    assert(std.mem.eql(u8, c.name, "Add"));
+    assert(std.mem.eql(u8, c.super, "java/lang/Object"));
     assert(c.fields.len == 0);
     assert(c.methods.len == 2);
     assert(std.mem.eql(u8, c.methods[0].name, "<init>"));

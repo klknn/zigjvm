@@ -12,7 +12,10 @@ jobs:
         wget --quiet --output-document=- $ZIG | tar Jx
         mv zig-linux-x86_64-* zig
         echo zig version $(./zig/zig version)
+    - name: build
+      run: |        
+        ./zig/zig build-exe ./src/main.zig -lc
+        ./main test/Add.class
     - name: test
       run: |
         ./zig/zig build test
-

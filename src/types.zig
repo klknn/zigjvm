@@ -2,23 +2,18 @@ const std = @import("std");
 
 pub var allocator = std.heap.c_allocator; // std.heap.page_allocator;
 
-// zig fmt: off
 /// Name and type indices aggregate.
 pub const NameAndType = struct {
     name: u16,
-    t: u16
+    t: u16,
 };
-// zig fmt: on
 
-// zig fmt: off
 /// Field type.
 pub const ConstField = struct {
     class: u16,
-    name_and_type: u16
+    name_and_type: u16,
 };
-// zig fmt: on
 
-// zig fmt: off
 /// Table 4.4-A. Constant pool tags (by section)
 /// https://docs.oracle.com/javase/specs/jvms/se14/html/jvms-4.html
 pub const ConstTag = enum(u8) {
@@ -28,9 +23,8 @@ pub const ConstTag = enum(u8) {
     string = 0x8,
     field = 0x9,
     method = 0xa,
-    name_and_type = 0xc
+    name_and_type = 0xc,
 };
-// zig fmt: on
 
 /// Values in const pool
 pub const Const = union(ConstTag) {
