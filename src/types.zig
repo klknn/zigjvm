@@ -86,7 +86,7 @@ pub const Class = struct {
         }
     }
 
-    fn utf8(self: Class, index: usize) []const u8 {
+    pub fn utf8(self: Class, index: usize) []const u8 {
         const c = self.const_pool[index];
         return switch (c) {
             .utf8 => c.utf8,
