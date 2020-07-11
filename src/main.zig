@@ -44,14 +44,23 @@ fn loadBytes(len: usize, file: std.fs.File) ![]u8 {
     return buf;
 }
 
+// zig fmt: off
+/// Name and type indices aggregate.
 const NameAndType = struct {
-    name: u16, t: u16
+    name: u16,
+    t: u16
 };
+// zig fmt: on
 
+// zig fmt: off
+/// Field type.
 const Field = struct {
-    class: u16, name_and_type: u16
+    class: u16,
+    name_and_type: u16
 };
+// zig fmt: on
 
+/// Method type same to Field.
 const Method = Field;
 
 // zig fmt: off
@@ -66,20 +75,30 @@ const ConstTag = enum(u8) {
     method = 0xa,
     name_and_type = 0xc
 };
+// zig fmt: on
 
 /// Values in const pool
 const Const = union(ConstTag) {
-    unused: u1,
+    utf8: []const u8,
+    unused: bool,
     class: u16,
     string: u16,
     field: Field,
     method: Field,
     name_and_type: NameAndType,
-    utf8: []const u8, // format will be broken if this field comes first
 
+    /// Destroys utf8 string.
+    pub fn deinit(self: Const) void {
+        switch (self) {
+            .utf8 => allocator.destroy(self.utf8.ptr),
+            else => {},
+        }
+    }
+
+    /// Loads union fields from a given file.
     pub fn load(file: std.fs.File) !Const {
         return switch (@intToEnum(ConstTag, try loadT(u8, file))) {
-            ConstTag.unused => Const{ .unused = 0 },
+            ConstTag.unused => Const{ .unused = true },
             ConstTag.class => Const{ .class = try loadT(u16, file) },
             ConstTag.string => Const{ .string = try loadT(u16, file) },
             ConstTag.utf8 => Const{ .utf8 = try loadBytes(try loadT(u16, file), file) },
@@ -105,51 +124,78 @@ const Const = union(ConstTag) {
     }
 };
 
-fn loadConstPool(file: std.fs.File) ![]Const {
-    const len = try loadT(u16, file);
-    var ret = try allocator.alloc(Const, len);
-    // The constant_pool table is indexed from 1 to constant_pool_count - 1.
-    // https://docs.oracle.com/javase/specs/jvms/se14/html/jvms-4.html#jvms-4.1
-    warn("constant pool [\n", .{});
-    defer warn("]\n", .{});
-    for (ret) |*c, i| {
-        c.* = if (i == 0)
-            Const { .unused = 0 }
-        else
-            try Const.load(file);
-        warn("  {}: {}\n", .{i, c});
+const Class = struct {
+    const_pool: []Const,
+
+    pub fn deinit(self: Class) void {
+        for (self.const_pool) |c| {
+            c.deinit();
+        }
     }
 
-    return ret;
-}
+    pub fn load(file: std.fs.File) !Class {
+        var ret: Class = undefined;
+        var buffer: [4]u8 = undefined;
+        const bytes_read = try file.read(buffer[0..buffer.len]);
+        assert(buffer[0] == 0xca);
+        assert(buffer[1] == 0xfe);
+        assert(buffer[2] == 0xba);
+        assert(buffer[3] == 0xbe);
+
+        const minor = try loadT(u16, file);
+        const major = try loadT(u16, file);
+        warn("class file version {}.{}\n", .{ major, minor });
+        assert(major >= 45);
+
+        const len = try loadT(u16, file);
+        warn("constant pool length: {}\n", .{len});
+        ret.const_pool = try allocator.alloc(Const, len);
+        // The constant_pool table is indexed from 1 to constant_pool_count - 1.
+        // https://docs.oracle.com/javase/specs/jvms/se14/html/jvms-4.html#jvms-4.1
+        warn("constant pool [\n", .{});
+        defer warn("]\n", .{});
+        for (ret.const_pool) |*v, i| {
+            v.* = if (i == 0) Const{ .unused = true } else try Const.load(file);
+            warn("  {}: {}\n", .{ i, v });
+        }
+        return ret;
+    }
+};
 
 pub fn main() !void {
+    // get args
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
-    const classFile = args[1];
-    const file = try std.fs.cwd().openFile(classFile, .{ .read = true, .write = false });
+
+    const path = args[1];
+    const file = try std.fs.cwd().openFile(path, .{ .write = false });
     defer file.close();
 
-    var buffer: [4]u8 = undefined;
-    const bytes_read = try file.read(buffer[0..buffer.len]);
-    warn("OK", .{});
+    const c = try Class.load(file);
+    defer c.deinit();
 }
 
 test "cafebabe" {
-    var file = try std.fs.cwd().openFile("test/Add.class", .{ .read = true, .write = false });
+    const file = try std.fs.cwd().openFile("test/Add.class", .{ .write = false });
     defer file.close();
 
-    var buffer: [4]u8 = undefined;
-    const bytes_read = try file.read(buffer[0..buffer.len]);
-    assert(buffer[0] == 0xca);
-    assert(buffer[1] == 0xfe);
-    assert(buffer[2] == 0xba);
-    assert(buffer[3] == 0xbe);
-
-    const minor = try loadT(u16, file);
-    const major = try loadT(u16, file);
-    warn("class file version {}.{}\n", .{ major, minor });
-    assert(major >= 45);
-    const cp = try loadConstPool(file);
-    assert(std.mem.eql(u8, cp[14].utf8, "java/lang/Object"));
+    const c = try Class.load(file);
+    defer c.deinit();
+    assert(c.const_pool[0].unused);
+    assert(c.const_pool[1].method.class == 3);
+    assert(c.const_pool[1].method.name_and_type == 12);
+    assert(c.const_pool[2].class == 13);
+    assert(c.const_pool[3].class == 14);
+    assert(std.mem.eql(u8, c.const_pool[4].utf8, "<init>"));
+    assert(std.mem.eql(u8, c.const_pool[5].utf8, "()V"));
+    assert(std.mem.eql(u8, c.const_pool[6].utf8, "Code"));
+    assert(std.mem.eql(u8, c.const_pool[7].utf8, "LineNumberTable"));
+    assert(std.mem.eql(u8, c.const_pool[8].utf8, "add"));
+    assert(std.mem.eql(u8, c.const_pool[9].utf8, "(II)I"));
+    assert(std.mem.eql(u8, c.const_pool[10].utf8, "SourceFile"));
+    assert(std.mem.eql(u8, c.const_pool[11].utf8, "Add.java"));
+    assert(c.const_pool[12].name_and_type.name == 4);
+    assert(c.const_pool[12].name_and_type.t == 5);
+    assert(std.mem.eql(u8, c.const_pool[13].utf8, "Add"));
+    assert(std.mem.eql(u8, c.const_pool[14].utf8, "java/lang/Object"));
 }
