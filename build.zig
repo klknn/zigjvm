@@ -25,5 +25,9 @@ pub fn build(b: *Builder) void {
     const main_test = b.addTest("src/main.zig");
     main_test.linkSystemLibrary("c");
     test_step.dependOn(&main_test.step);
+    const loader_test = b.addTest("src/loader.zig");
+    loader_test.linkSystemLibrary("c");
+    test_step.dependOn(&loader_test.step);
+    test_step.dependOn(&b.addTest("src/types.zig").step);
     test_step.dependOn(&b.addTest("src/memo.zig").step);
 }
