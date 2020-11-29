@@ -1,6 +1,6 @@
 # zigjvm (wip)
 
-![0.6.0](https://github.com/klknn/zigjvm/workflows/0.6.0/badge.svg)
+![0.7.0](https://github.com/klknn/zigjvm/workflows/0.7.0/badge.svg)
 ![master](https://github.com/klknn/zigjvm/workflows/master/badge.svg)
 
 zig implementation of toy jvm https://zserge.com/posts/jvm/

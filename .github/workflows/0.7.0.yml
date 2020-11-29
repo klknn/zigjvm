@@ -1,14 +1,14 @@
-name: 0.6.0
+name: 0.7.0
 on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-18.04
+    runs-on: [ubuntu-18.04, ubuntu-20.04]
     steps:
     - uses: actions/checkout@v1
     - name: install
       run: |
-        wget --quiet --output-document=- https://ziglang.org/download/0.6.0/zig-linux-x86_64-0.6.0.tar.xz | tar Jx
+        wget --quiet --output-document=- https://ziglang.org/download/0.7.0/zig-linux-x86_64-0.7.0.tar.xz | tar Jx
         mv zig-linux-x86_64-* zig
         echo zig version $(./zig/zig version)
     - name: build

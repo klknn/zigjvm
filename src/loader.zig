@@ -1,6 +1,5 @@
 const std = @import("std");
-// const warn = std.debug.warn;
-pub fn warn(comptime fmt: []const u8, args: var) void {}
+const warn = std.debug.warn;
 const assert = std.debug.assert;
 
 const types = @import("types.zig");

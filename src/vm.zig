@@ -74,10 +74,10 @@ const Frame = struct {
                     stack_ptr -= 1;
                     return self.stack[stack_ptr + 1];
                 },
-                else => {
-                    warn("NOT IMPLEMENTED: {}", .{inst});
-                    assert(false);
-                },
+                // else => {
+                //     warn("NOT IMPLEMENTED: {}", .{inst});
+                //     assert(false);
+                // },
             }
         }
     }
