@@ -4,7 +4,6 @@ const warn = std.debug.warn;
 const assert = std.debug.assert;
 
 test "memo" {
-    var a: *i32 = undefined;
     var b: ?i32 = null;
     assert(b == null);
     b = 2;

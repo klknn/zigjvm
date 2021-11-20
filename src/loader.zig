@@ -92,7 +92,7 @@ pub const Loader = struct {
                 .name = cls.utf8(try self.primitive(u16)),
                 .data = try self.bytes(try self.primitive(u32)),
             };
-            warn("attribute {}, name: {}, len: {}\n", .{
+            warn("attribute {}, name: {s}, len: {}\n", .{
                 i, a.name, a.data.len,
             });
         }
@@ -154,9 +154,9 @@ pub const Loader = struct {
         // Loads class fields.
         ret.flags = try self.primitive(u16);
         ret.name = ret.utf8(try self.primitive(u16));
-        warn("Class.name: {}\n", .{ret.name});
+        warn("Class.name: {s}\n", .{ret.name});
         ret.super = ret.utf8(try self.primitive(u16));
-        warn("Class.super: {}\n", .{ret.super});
+        warn("Class.super: {s}\n", .{ret.super});
         ret.interfaces = try self.interfaces(ret);
         warn("Class.fields:\n", .{});
         ret.fields = try self.fields(ret);
