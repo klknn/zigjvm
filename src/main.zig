@@ -36,11 +36,11 @@ pub fn main() !u8 {
     const args = try std.process.argsAlloc(types.allocator);
     defer std.process.argsFree(types.allocator, args);
     if (args.len == 1) {
-        warn("{}\n", .{help});
+        warn("{s}\n", .{help});
         return 1;
     }
     if (std.mem.eql(u8, args[1], "-h") or std.mem.eql(u8, args[1], "--help")) {
-        warn("{}\n", .{help});
+        warn("{s}\n", .{help});
         return 0;
     }
 
